@@ -1,15 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <title>Mencore AI Dashboard</title>
 
+<!-- OCR Library -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+
+<!-- Chart.js for graphs -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{
-    background:#0a0f1c;
+    background:#050d1a;
     color:#00ffc3;
     font-family:monospace;
     text-align:center;
@@ -21,9 +24,9 @@ h1{
 }
 
 .box{
-    border:1px solid #00ffc3;
-    padding:15px;
-    margin-top:20px;
+    border:2px solid #00ffc3;
+    padding:10px;
+    margin:10px;
     border-radius:10px;
 }
 
@@ -33,19 +36,16 @@ button{
     padding:15px;
     font-weight:bold;
     cursor:pointer;
+}
+
+#status{
+    color:yellow;
     margin-top:10px;
 }
 
-#loading{
-    display:none;
-    color:yellow;
-    font-size:18px;
-}
-
 canvas{
+    background:#111;
     margin-top:20px;
-    background:#fff;
-    border-radius:10px;
 }
 </style>
 </head>
@@ -56,122 +56,112 @@ canvas{
 
 <input type="file" id="imageInput"><br><br>
 
-<button onclick="analyze()">⚡ SCAN IMAGE</button>
+<button onclick="scanImage()">⚡ SCAN IMAGE</button>
 
-<div id="loading">⚡ Scanning reactions with AI...</div>
+<div id="status">Waiting...</div>
 
-<div id="result"></div>
+<div class="box" id="result"></div>
 
 <canvas id="chart"></canvas>
 
 <script>
 
-async function analyze(){
-
+async function scanImage(){
     const file = document.getElementById("imageInput").files[0];
     if(!file){
-        alert("Upload image first");
+        alert("Upload image first!");
         return;
     }
 
-    document.getElementById("loading").style.display = "block";
-    document.getElementById("result").innerHTML = "";
+    document.getElementById("status").innerText = "⚡ Scanning with Ultra AI...";
 
-    const img = URL.createObjectURL(file);
-
-    const { data: { text } } = await Tesseract.recognize(
-        img,
+    const { data:{ text } } = await Tesseract.recognize(
+        file,
         'eng',
-        { logger: m => console.log(m) }
+        {
+            logger: m => console.log(m)
+        }
     );
 
-    console.log("OCR TEXT:", text);
+    console.log(text);
 
-    // 🔍 Extract numbers
-    let numbers = text.match(/\d+/g)?.map(n => parseInt(n)) || [];
+    analyze(text);
+}
 
-    if(numbers.length < 4){
-        document.getElementById("loading").style.display = "none";
-        document.getElementById("result").innerHTML =
-        "❌ Could not detect reactions clearly. Try clearer image.";
-        return;
+function analyze(text){
+
+    // CLEAN TEXT
+    text = text.replace(/\n/g, " ");
+
+    // EXTRACT TOTAL REACTIONS
+    let totalMatch = text.match(/(\d+)\s*reactions/i);
+    let total = totalMatch ? parseInt(totalMatch[1]) : 0;
+
+    // EXTRACT EMOJIS
+    let love = extract(text, "❤️") || extract(text, "❤");
+    let like = extract(text, "👍");
+    let laugh = extract(text, "😂");
+    let wow = extract(text, "😮");
+    let sad = extract(text, "😢");
+    let pray = extract(text, "🙏");
+
+    // FIX: If OCR fails, estimate from numbers
+    if(total === 0){
+        total = love + like + laugh + wow + sad + pray;
     }
 
-    // ✅ FIRST NUMBER = TOTAL
-    let total = numbers[0];
+    // CALCULATE %
+    let lovePercent = total ? (love / total) * 100 : 0;
 
-    // Reactions
-    let love = numbers[1] || 0;
-    let like = numbers[2] || 0;
-    let laugh = numbers[3] || 0;
-    let wow = numbers[4] || 0;
-    let pray = numbers[5] || 0;
-    let sad = numbers[6] || 0;
-
-    // 🔢 Calculate total from emojis
-    let calculatedTotal = love + like + laugh + wow + pray + sad;
-
-    // 🎯 Accuracy
-    let accuracy = (calculatedTotal / total) * 100;
-
-    let warning = "";
-    if(calculatedTotal !== total){
-        warning = "⚠️ Mismatch detected (OCR may be imperfect)";
+    // BOT DETECTION RULE
+    let verdict = "";
+    if(lovePercent >= 80){
+        verdict = "⚠️ BOT REACTION DETECTED (Love >= 80%)";
+    }else{
+        verdict = "✅ ORGANIC / MIXED REACTIONS";
     }
 
-    // 🔥 YOUR BOT RULE
-    let others = like + laugh + wow + sad + pray;
-
-    let botDetected = false;
-
-    if(others > 0 && love >= (1.8 * others)){
-        botDetected = true;
-    }
-
-    let resultText = botDetected
-        ? "⚠️ BOT REACTION DETECTED (Love ≥ 80% more than others)"
-        : "✅ Organic / Mixed reactions";
-
-    let ratio = others > 0 ? (love / others).toFixed(2) : "∞";
-
-    document.getElementById("loading").style.display = "none";
-
-    // 📊 RESULT DISPLAY
+    // SHOW RESULT
     document.getElementById("result").innerHTML = `
-        <div class="box">
-        <b>Total (From Image):</b> ${total}<br>
-        <b>Calculated Total:</b> ${calculatedTotal}<br>
-        <b>Accuracy:</b> ${accuracy.toFixed(2)}%<br>
-        ${warning}<br><br>
+    <h3>📊 Analysis Result</h3>
+    Total Reactions: <b>${total}</b><br><br>
 
-        ❤️ Love: ${love}<br>
-        👍 Like: ${like}<br>
-        😂 Laugh: ${laugh}<br>
-        😮 Wow: ${wow}<br>
-        🙏 Pray: ${pray}<br>
-        😢 Sad: ${sad}<br><br>
+    ❤️ Love: ${love}<br>
+    👍 Like: ${like}<br>
+    😂 Laugh: ${laugh}<br>
+    😮 Wow: ${wow}<br>
+    😢 Sad: ${sad}<br>
+    🙏 Pray: ${pray}<br><br>
 
-        <b>Others Total:</b> ${others}<br>
-        <b>Love vs Others Ratio:</b> ${ratio}x<br><br>
+    ❤️ Love %: ${lovePercent.toFixed(2)}%<br><br>
 
-        <b>${resultText}</b>
-        </div>
+    <b>${verdict}</b>
     `;
 
-    // 📊 GRAPH
+    drawChart(love, like, laugh, wow, sad, pray);
+}
+
+// SMART EMOJI EXTRACTOR
+function extract(text, emoji){
+    let regex = new RegExp(emoji + "\\s*(\\d+)");
+    let match = text.match(regex);
+    return match ? parseInt(match[1]) : 0;
+}
+
+// GRAPH
+function drawChart(love, like, laugh, wow, sad, pray){
     const ctx = document.getElementById('chart');
 
     new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['❤️','👍','😂','😮','🙏','😢'],
+            labels: ['❤️','👍','😂','😮','😢','🙏'],
             datasets: [{
                 label: 'Reactions',
-                data: [love, like, laugh, wow, pray, sad]
+                data: [love, like, laugh, wow, sad, pray]
             }]
         }
     });
-
 }
 
 </script>
