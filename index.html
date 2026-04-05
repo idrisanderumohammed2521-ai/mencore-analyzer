@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Reaction Analyzer v4</title>
+<title>Mencore AI Analyzer</title>
 
 <style>
 body {
-    font-family: Arial, sans-serif;
-    background: #0d1b2a;
-    color: white;
+    background: black;
+    color: #00ff9c;
+    font-family: monospace;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -17,82 +17,139 @@ body {
 }
 
 .container {
-    background: #1b263b;
-    padding: 25px;
-    border-radius: 15px;
+    border: 1px solid #00ff9c;
+    padding: 20px;
+    border-radius: 10px;
     width: 90%;
     max-width: 400px;
+    box-shadow: 0 0 20px #00ff9c;
+}
+
+h2 {
     text-align: center;
 }
 
 input, button {
     width: 100%;
-    padding: 12px;
+    padding: 10px;
     margin-top: 10px;
-    border-radius: 10px;
-    border: none;
+    background: black;
+    color: #00ff9c;
+    border: 1px solid #00ff9c;
+    border-radius: 5px;
 }
 
 button {
-    background: #2ecc71;
-    color: white;
+    cursor: pointer;
     font-weight: bold;
 }
 
-#result {
-    margin-top: 20px;
-    font-size: 18px;
+#terminal {
+    margin-top: 15px;
+    font-size: 13px;
+    min-height: 120px;
 }
+
+#result {
+    margin-top: 15px;
+}
+
+.bar {
+    height: 8px;
+    background: #00ff9c;
+    width: 0%;
+    margin-top: 10px;
+    transition: width 0.4s;
+}
+
 </style>
 </head>
 
 <body>
 
 <div class="container">
-    <h2>🤖 AI Reaction Analyzer v4</h2>
+    <h2>🟢 Mencore AI Analyzer</h2>
 
-    <input type="text" id="link" placeholder="Paste WhatsApp link">
+    <input type="text" id="link" placeholder="Enter target link">
+    <input type="file" id="image">
 
-    <input type="file" id="imageInput">
+    <button onclick="analyze()">INITIATE SCAN</button>
 
-    <button onclick="analyze()">Run AI Scan</button>
-
+    <div id="terminal"></div>
+    <div class="bar" id="bar"></div>
     <div id="result"></div>
 </div>
 
 <script>
-function analyze() {
-    let link = document.getElementById("link").value;
-    let file = document.getElementById("imageInput").files[0];
-    let result = document.getElementById("result");
 
-    if (!link || !file) {
-        alert("Please enter link and upload image");
+function typeLine(text, delay){
+    return new Promise(resolve=>{
+        setTimeout(()=>{
+            let terminal = document.getElementById("terminal");
+            terminal.innerHTML += text + "<br>";
+            terminal.scrollTop = terminal.scrollHeight;
+            resolve();
+        }, delay);
+    });
+}
+
+async function analyze(){
+    let link = document.getElementById("link").value;
+    let file = document.getElementById("image").files[0];
+    let bar = document.getElementById("bar");
+    let result = document.getElementById("result");
+    let terminal = document.getElementById("terminal");
+
+    if(!link || !file){
+        alert("Enter link and upload image");
         return;
     }
 
-    let score = 0;
+    terminal.innerHTML = "";
+    result.innerHTML = "";
+    bar.style.width = "0%";
 
-    // Simulated detection logic
-    if (link.includes("whatsapp")) score += 20;
-    if (file.name.toLowerCase().includes("screenshot")) score += 20;
-    if (file.name.length > 12) score += 15;
+    await typeLine("> Initializing AI core...", 500);
+    bar.style.width = "20%";
 
-    // Random AI behavior simulation
-    score += Math.floor(Math.random() * 50);
+    await typeLine("> Scanning image data...", 800);
+    bar.style.width = "40%";
 
-    let message = "";
+    await typeLine("> Extracting emoji reactions...", 800);
+    bar.style.width = "60%";
 
-    if (score >= 70) {
-        message = "⚠️ Bot-like reactions detected<br>Confidence: " + score + "%";
-    } else if (score >= 40) {
-        message = "🤔 Suspicious activity detected<br>Confidence: " + score + "%";
+    await typeLine("> Detecting bot patterns...", 800);
+    bar.style.width = "80%";
+
+    await typeLine("> Finalizing results...", 800);
+    bar.style.width = "100%";
+
+    // Fake emoji counts
+    let like = Math.floor(Math.random()*500);
+    let love = Math.floor(Math.random()*300);
+    let fire = Math.floor(Math.random()*200);
+
+    let score = Math.floor(Math.random()*100);
+
+    let verdict = "";
+
+    if(score > 70){
+        verdict = "⚠️ BOT ACTIVITY DETECTED";
+    } else if(score > 40){
+        verdict = "🤔 SUSPICIOUS ACTIVITY";
     } else {
-        message = "✅ Real user reactions<br>Confidence: " + score + "%";
+        verdict = "✅ REAL ENGAGEMENT";
     }
 
-    result.innerHTML = message;
+    result.innerHTML = `
+        <h3>${verdict}</h3>
+        AI Confidence: ${score}%<br><br>
+        👍 Likes: ${like}<br>
+        ❤️ Love: ${love}<br>
+        🔥 Fire: ${fire}
+    `;
 }
+
 </script>
 
 </body>
