@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Mencore AI Dashboard</title>
+<title>Mencore AI Pro</title>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -13,24 +13,20 @@ body{
     color:#00ffc3;
     font-family:monospace;
     text-align:center;
-    padding:20px;
 }
 
-h1{
-    color:#00ffc3;
+h1{color:#00ffc3;}
+
+input, button{
+    padding:10px;
+    margin:10px;
 }
 
 button{
     background:#00ffc3;
     border:none;
-    padding:15px;
     font-weight:bold;
     cursor:pointer;
-}
-
-#status{
-    color:yellow;
-    margin-top:10px;
 }
 
 .box{
@@ -40,18 +36,22 @@ button{
     border-radius:10px;
 }
 
-canvas{
-    margin-top:20px;
-    background:#111;
-}
+#status{color:yellow;}
 </style>
 </head>
 
 <body>
 
-<h1>🟢 Mencore AI Dashboard</h1>
+<h1>🟢 Mencore AI PRO Dashboard</h1>
 
-<input type="file" id="imageInput"><br><br>
+<!-- NEW: WHATSAPP LINK INPUT -->
+<input type="text" id="linkInput" placeholder="Paste WhatsApp post link here">
+
+<br>
+
+<input type="file" id="imageInput">
+
+<br>
 
 <button onclick="scanImage()">⚡ SCAN IMAGE</button>
 
@@ -63,92 +63,98 @@ canvas{
 
 <script>
 
-let chartInstance = null;
+let chartInstance;
 
 async function scanImage(){
 
     const file = document.getElementById("imageInput").files[0];
+    const link = document.getElementById("linkInput").value;
 
     if(!file){
-        alert("Upload image first!");
+        alert("Upload screenshot!");
         return;
     }
 
-    document.getElementById("status").innerText = "⚡ Scanning with Ultra AI...";
+    document.getElementById("status").innerText = "⚡ Ultra AI scanning...";
 
-    const { data:{ text } } = await Tesseract.recognize(
-        file,
-        'eng',
-        { logger: m => console.log(m) }
-    );
+    const { data:{ text } } = await Tesseract.recognize(file, 'eng');
 
-    console.log("OCR TEXT:", text);
+    console.log("RAW OCR:", text);
 
-    analyze(text);
+    analyze(text, link);
 }
 
-function analyze(text){
+function analyze(text, link){
 
     text = text.replace(/\n/g, " ");
-
-    // GET TOTAL REACTIONS (TOP NUMBER)
-    let totalMatch = text.match(/(\d+)\s*reactions/i);
-    let total = totalMatch ? parseInt(totalMatch[1]) : 0;
 
     // GET ALL NUMBERS
     let numbers = text.match(/\d+/g)?.map(Number) || [];
 
-    console.log("ALL NUMBERS:", numbers);
+    console.log("Numbers:", numbers);
 
     /*
-    Expected format:
-    [649, 499, 103, 31, 8, 5, 3]
+    EXPECTED FORMAT:
+    [TOTAL, LOVE, LIKE, LAUGH, WOW, PRAY, SAD]
     */
 
-    let love=0, like=0, laugh=0, wow=0, pray=0, sad=0;
+    let total=0, love=0, like=0, laugh=0, wow=0, pray=0, sad=0;
 
+    // SMART DETECTION
     if(numbers.length >= 7){
 
-        // First = total reactions
-        total = numbers[0];
+        // Find biggest number = TOTAL
+        total = Math.max(...numbers);
 
-        // Next numbers follow WhatsApp layout
-        love = numbers[1];
-        like = numbers[2];
-        laugh = numbers[3];
-        wow = numbers[4];
-        pray = numbers[5];
-        sad = numbers[6];
+        // Remove total from list
+        numbers.splice(numbers.indexOf(total),1);
+
+        // Sort remaining descending
+        numbers.sort((a,b)=>b-a);
+
+        // Assign values
+        love = numbers[0] || 0;
+        like = numbers[1] || 0;
+        laugh = numbers[2] || 0;
+        wow = numbers[3] || 0;
+        pray = numbers[4] || 0;
+        sad = numbers[5] || 0;
     }
 
-    // SAFETY FIX (if total missing)
+    // FALLBACK
     if(total === 0){
         total = love + like + laugh + wow + pray + sad;
     }
 
-    // CALCULATE LOVE %
-    let lovePercent = total ? (love / total) * 100 : 0;
+    // VALIDATION FIX
+    let sum = love+like+laugh+wow+pray+sad;
 
-    // BOT DETECTION RULE (YOUR RULE)
-    let verdict = "";
-    if(lovePercent >= 80){
-        verdict = "⚠️ BOT REACTION DETECTED";
-    }else{
-        verdict = "✅ ORGANIC / MIXED REACTIONS";
+    if(sum > total){
+        total = sum;
     }
 
-    // DISPLAY RESULT
+    // LOVE %
+    let lovePercent = total ? (love / total) * 100 : 0;
+
+    // BOT RULE
+    let verdict = lovePercent >= 80
+        ? "⚠️ BOT REACTION DETECTED"
+        : "✅ ORGANIC / MIXED";
+
+    // OUTPUT
     document.getElementById("result").innerHTML = `
-    <h3>📊 Analysis Result</h3>
+    <h3>📊 AI Analysis</h3>
 
-    Total Reactions: <b>${total}</b><br><br>
+    🔗 Link: ${link || "Not provided"}<br><br>
 
-    ❤️ Love: ${love}<br>
-    👍 Like: ${like}<br>
-    😂 Laugh: ${laugh}<br>
-    😮 Wow: ${wow}<br>
-    🙏 Pray: ${pray}<br>
-    😢 Sad: ${sad}<br><br>
+    Total: <b>${total}</b><br><br>
+
+    ❤️ ${love} |
+    👍 ${like} |
+    😂 ${laugh} |
+    😮 ${wow} |
+    🙏 ${pray} |
+    😢 ${sad}<br><br>
 
     ❤️ Love %: ${lovePercent.toFixed(2)}%<br><br>
 
@@ -160,8 +166,6 @@ function analyze(text){
     document.getElementById("status").innerText = "✅ Scan Complete";
 }
 
-
-// GRAPH FUNCTION
 function drawChart(love, like, laugh, wow, sad, pray){
 
     const ctx = document.getElementById('chart');
