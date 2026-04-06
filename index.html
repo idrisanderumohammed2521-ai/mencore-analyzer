@@ -1,168 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Mini Mencore AI Detector</title>
-
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-
-<style>
-body {
-    background: #0f172a;
-    color: white;
-    font-family: Arial;
-    text-align: center;
-}
-input, button {
-    padding: 10px;
-    margin: 5px;
-    border-radius: 8px;
-    border: none;
-}
-button {
-    background: orange;
-    font-weight: bold;
-}
-.card {
-    background: #1e293b;
-    padding: 20px;
-    margin-top: 20px;
-    border-radius: 12px;
-}
-img {
-    max-width: 250px;
-    margin-top: 10px;
-}
-</style>
+    <meta charset="UTF-8">
+    <title>WhatsApp Bot Reaction Detector</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <style>
+        body {
+            background: #0f172a;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        input, button {
+            padding: 10px;
+            margin: 10px;
+            border-radius: 8px;
+            border: none;
+        }
+        button {
+            background: orange;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .card {
+            background: #1e293b;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 12px;
+        }
+        img {
+            max-width: 250px;
+            margin-top: 10px;
+        }
+    </style>
 </head>
-
 <body>
 
-<h1>🔥 Mini Mencore AI Bot Detector</h1>
+    <h1>🔥 WhatsApp Bot Reaction Detector</h1>
 
-<input id="link" placeholder="Paste WhatsApp Channel Link"><br>
-<input id="total" placeholder="Total Reactions"><br>
+    <!-- WhatsApp Link Input -->
+    <input id="link" placeholder="Paste WhatsApp Channel Link"><br><br>
 
-<input type="file" id="imageInput" accept="image/*"><br>
-<img id="preview"/>
+    <!-- Image Upload -->
+    <input type="file" id="imageInput" accept="image/*"><br>
+    <img id="preview" style="display:none;"/>
 
-<button onclick="processImage()">Analyze Image</button>
+    <button onclick="processImage()">Analyze Image</button>
 
-<div class="card" id="resultBox" style="display:none;">
-    <h2 id="result"></h2>
-    <pre id="details"></pre>
-</div>
+    <div class="card" id="resultBox" style="display:none;">
+        <h2 id="result"></h2>
+        <pre id="details"></pre>
+    </div>
 
-<script>
+    <script>
+        // Preview Image
+        document.getElementById("imageInput").onchange = function(e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById("preview");
 
-// Preview Image
-document.getElementById("imageInput").onchange = function(e) {
-    const file = e.target.files[0];
-    document.getElementById("preview").src = URL.createObjectURL(file);
-};
+            if (file) {
+                preview.src = URL.createObjectURL(file);
+                preview.style.display = "block";
+            }
+        };
 
-// OCR + Detection
-async function processImage() {
-    const file = document.getElementById("imageInput").files[0];
-    const totalInput = Number(document.getElementById("total").value);
+        // Image Processing and Detection
+        async function processImage() {
+            const file = document.getElementById("imageInput").files[0];
+            const link = document.getElementById("link").value;
 
-    if (!file) {
-        alert("Upload image first");
-        return;
-    }
+            if (!file) {
+                alert("Please upload an image first.");
+                return;
+            }
 
-    document.getElementById("result").innerText = "⏳ Scanning image...";
+            document.getElementById("result").innerText = "⏳ Scanning image...";
 
-    const { data: { text } } = await Tesseract.recognize(file, 'eng');
+            // Use Tesseract.js to recognize text in the image
+            const { data: { text } } = await Tesseract.recognize(file, 'eng');
 
-    console.log("OCR TEXT:", text);
+            console.log("OCR Result:", text);
 
-    // Extract numbers from image
-    const numbers = text.match(/\d+/g)?.map(Number) || [];
+            // Extract numbers from image (assume reactions are first 5 numbers in order)
+            const numbers = text.match(/\d+/g)?.map(Number) || [];
 
-    if (numbers.length < 2) {
-        document.getElementById("result").innerText = "❌ Couldn't detect reactions properly";
-        return;
-    }
+            if (numbers.length < 5) {
+                document.getElementById("result").innerText = "❌ Could not detect at least 5 reactions from the image.";
+                return;
+            }
 
-    // Assume first few numbers are reactions
-    const reactions = {
-        "❤️": numbers[0] || 0,
-        "😂": numbers[1] || 0,
-        "😮": numbers[2] || 0,
-        "😢": numbers[3] || 0,
-        "👍": numbers[4] || 0
-    };
+            // Map extracted numbers to reaction types
+            const reactions = {
+                "❤️": numbers[0] || 0,
+                "😂": numbers[1] || 0,
+                "😮": numbers[2] || 0,
+                "😢": numbers[3] || 0,
+                "👍": numbers[4] || 0
+            };
 
-    const result = detectBotReaction({
-        reactions,
-        views: totalInput
-    });
+            // Detect bot reaction based on love reaction percentage
+            const totalReactions = Object.values(reactions).reduce((a, b) => a + b, 0);
+            const lovePercentage = (reactions["❤️"] / totalReactions) * 100;
 
-    document.getElementById("resultBox").style.display = "block";
-    document.getElementById("result").innerText = result.result;
+            const result = lovePercentage >= 80 ? "🚨 Likely Bot Reactions" : "✅ Looks Natural";
 
-    document.getElementById("details").innerText =
-`Detected Reactions:
-❤️ ${reactions["❤️"]}
-😂 ${reactions["😂"]}
-😮 ${reactions["😮"]}
-😢 ${reactions["😢"]}
-👍 ${reactions["👍"]}
+            // Display results
+            document.getElementById("resultBox").style.display = "block";
+            document.getElementById("result").innerText = result;
+            document.getElementById("details").innerText =
+                `WhatsApp Link: ${link}
+Total Reactions Detected: ${totalReactions}
+❤️ Reactions: ${reactions["❤️"]}
+Love Percentage: ${lovePercentage.toFixed(2)}%
 
-Score: ${result.score}
-Dominant: ${result.dominantPercentage}
-Ratio: ${result.ratio}
+${lovePercentage >= 80 ? "Bot behavior detected!" : "Normal user reactions."}`;
+        }
 
-Rules:
-- ${result.rules.join("\n- ")}`;
-}
-
-
-// Detection Algorithm
-function detectBotReaction(data) {
-    const { reactions, views } = data;
-
-    const total = Object.values(reactions).reduce((a,b)=>a+b,0);
-    const max = Math.max(...Object.values(reactions));
-    const dominant = (max / total) * 100;
-
-    const unique = Object.values(reactions).filter(v=>v>0).length;
-    const diversity = unique / Object.keys(reactions).length;
-
-    const ratio = total / views;
-
-    let score = 0;
-    let rules = [];
-
-    if (dominant >= 85) { score += 35; rules.push("Extreme dominance"); }
-    else if (dominant >= 75) { score += 25; rules.push("High dominance"); }
-
-    if (diversity <= 0.3) { score += 20; rules.push("Low diversity"); }
-
-    if (ratio >= 0.7) { score += 30; rules.push("High ratio"); }
-    else if (ratio >= 0.5) { score += 20; rules.push("Medium ratio"); }
-
-    if (dominant > 80 && ratio > 0.6) {
-        score += 15;
-        rules.push("Combo trigger");
-    }
-
-    let result = "";
-    if (score >= 75) result = "🚨 Likely Bot Reactions";
-    else if (score >= 45) result = "⚠️ Suspicious Activity";
-    else result = "✅ Looks Natural";
-
-    return {
-        score,
-        dominantPercentage: dominant.toFixed(2) + "%",
-        ratio: ratio.toFixed(2),
-        rules,
-        result
-    };
-}
-
-</script>
+    </script>
 
 </body>
 </html>
