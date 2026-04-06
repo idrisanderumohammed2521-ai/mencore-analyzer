@@ -2,22 +2,24 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>🔥 Mini Mencore Bot Detector</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Mencore Smart Bot Detector</title>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
 <style>
 body {
     font-family: Arial;
-    background: #0b1a2a;
+    background: #0b1c2c;
     color: white;
     text-align: center;
     padding: 20px;
 }
 
-h1 {
-    margin-bottom: 20px;
-}
+h1 { color: orange; }
 
-input, button {
+input, textarea {
+    width: 80%;
     padding: 10px;
     margin: 10px;
     border-radius: 8px;
@@ -26,97 +28,129 @@ input, button {
 
 button {
     background: orange;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
     cursor: pointer;
     font-weight: bold;
 }
 
-#resultBox {
-    margin-top: 30px;
-    padding: 20px;
-    background: #132b45;
-    border-radius: 10px;
+#result {
+    margin-top: 20px;
+    font-size: 18px;
 }
 </style>
 </head>
 
 <body>
 
-<h1>🔥 Mini Mencore Bot Detector</h1>
+<h1>🔥 Mini Mencore Smart Detector</h1>
 
-<input type="text" id="link" placeholder="Paste WhatsApp Channel Link" size="40"><br>
+<input type="text" id="link" placeholder="Paste WhatsApp Channel Link">
 
-<input type="text" id="numbers" placeholder="Paste reaction numbers (comma separated)">
-<br>
+<textarea id="manualInput" placeholder="Example: ❤️ 758 👍 323 😂 113"></textarea>
 
-<button onclick="analyze()">Analyze</button>
+<input type="file" id="imageInput" accept="image/*">
 
-<div id="resultBox"></div>
+<br><br>
+
+<button onclick="analyzeManual()">Analyze Manual</button>
+<button onclick="analyzeImage()">Analyze Image</button>
+
+<div id="result"></div>
 
 <script>
-function analyze() {
 
-    const link = document.getElementById("link").value;
-    const input = document.getElementById("numbers").value;
+// ================= EMOJI MAP =================
+const emojiMap = {
+    "❤️": "love",
+    "❤": "love",
+    "👍": "like",
+    "😂": "laugh",
+    "😮": "wow",
+    "🙏": "pray",
+    "😢": "sad",
+    "😭": "cry"
+};
+
+// ================= MANUAL =================
+function analyzeManual() {
+    let input = document.getElementById("manualInput").value;
 
     if (!input) {
-        alert("Enter reaction numbers!");
+        alert("Enter reactions");
         return;
     }
 
-    // Convert input to array
-    let reactions = input.split(",").map(num => parseInt(num.trim()));
+    processText(input);
+}
 
-    // Total reactions
-    const total = reactions.reduce((a, b) => a + b, 0);
+// ================= IMAGE =================
+async function analyzeImage() {
+    const file = document.getElementById("imageInput").files[0];
 
-    // Exact extraction
-    const love = reactions[0] || 0;
-    const like = reactions[1] || 0;
-    const laugh = reactions[2] || 0;
+    if (!file) {
+        alert("Upload image");
+        return;
+    }
 
-    // Others
-    const others = total - (love + like + laugh);
+    document.getElementById("result").innerHTML = "⏳ Scanning image...";
 
-    // Percentage
-    const lovePercent = (love / total) * 100;
+    const { data: { text } } = await Tesseract.recognize(file, 'eng');
+
+    console.log(text);
+
+    processText(text);
+}
+
+// ================= CORE PROCESS =================
+function processText(text) {
+
+    let reactions = {};
+    let total = 0;
+
+    // Match emoji + number pairs
+    const matches = text.match(/([❤️❤👍😂😮🙏😢😭])\s*(\d+)/g);
+
+    if (!matches) {
+        document.getElementById("result").innerHTML = "❌ Couldn't detect emoji values";
+        return;
+    }
+
+    matches.forEach(item => {
+        let emoji = item.match(/[❤️❤👍😂😮🙏😢😭]/)[0];
+        let value = parseInt(item.match(/\d+/)[0]);
+
+        reactions[emoji] = value;
+        total += value;
+    });
+
+    let love = reactions["❤️"] || reactions["❤"] || 0;
+
+    let percentage = (love / total) * 100;
 
     let result = "";
     let confidence = "";
 
-    // ✅ YOUR FINAL RULE (60%)
-    if (lovePercent >= 60) {
-        result = "🚨 BOT REACTION DETECTED";
-
-        if (lovePercent >= 80) {
-            confidence = "High (90–95%)";
-        } else if (lovePercent >= 70) {
-            confidence = "Medium (75–85%)";
-        } else {
-            confidence = "Low (60–70%)";
-        }
-
+    // ===== YOUR RULE =====
+    if (percentage >= 60) {
+        result = "⚠️ BOT DETECTED";
+        confidence = percentage.toFixed(2) + "%";
     } else {
-        result = "✅ ORGANIC REACTIONS";
-        confidence = "High (85–90%)";
+        result = "✅ REAL ENGAGEMENT";
+        confidence = (100 - percentage).toFixed(2) + "%";
     }
 
-    // Output
-    document.getElementById("resultBox").innerHTML = `
-        <h2>${result}</h2>
-        <p><b>WhatsApp Link:</b><br>${link}</p>
-
-        <p>
-        ❤️ Love: ${love} <br>
-        👍 Like: ${like} <br>
-        😂 Laugh: ${laugh} <br>
-        📦 Others: ${others}
-        </p>
-
+    document.getElementById("result").innerHTML = `
+        <p><b>WhatsApp Link:</b> ${document.getElementById("link").value || "N/A"}</p>
         <p><b>Total:</b> ${total}</p>
-        <p><b>Love Percentage:</b> ${lovePercent.toFixed(2)}%</p>
+        <p><b>❤️ Love:</b> ${love}</p>
+        <p><b>Love %:</b> ${percentage.toFixed(2)}%</p>
+        <p><b>Result:</b> ${result}</p>
         <p><b>Confidence:</b> ${confidence}</p>
     `;
 }
+
 </script>
 
 </body>
