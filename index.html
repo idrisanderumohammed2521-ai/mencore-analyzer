@@ -42,7 +42,7 @@ h2 {
 
 /* Inputs */
 input {
-    width: 250px;
+    width: 260px;
     padding: 12px;
     margin: 8px;
     border-radius: 10px;
@@ -95,13 +95,25 @@ button:hover {
 <input type="number" id="laugh" placeholder="😂 Laugh"><br>
 <input type="number" id="total" placeholder="📊 Total"><br>
 
-<button onclick="analyze()">Analyze</button>
+<button onclick="startAnalysis()">Initiate</button>
 
 <div class="result" id="output"></div>
 
 </div>
 
 <script>
+
+// Start with delay
+function startAnalysis() {
+
+    document.getElementById("output").innerHTML = "⏳ Initiating analysis...";
+
+    setTimeout(() => {
+        analyze();
+    }, 6000); // 6 seconds
+}
+
+// Main logic
 function analyze() {
 
     const link = document.getElementById("link").value;
@@ -111,7 +123,7 @@ function analyze() {
     const total = Number(document.getElementById("total").value);
 
     if (!total || love > total) {
-        alert("Invalid input");
+        document.getElementById("output").innerHTML = "❌ Invalid input";
         return;
     }
 
@@ -149,6 +161,7 @@ function analyze() {
         <p>Confidence: ${confidence}</p>
     `;
 }
+
 </script>
 
 </body>
