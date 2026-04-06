@@ -2,88 +2,128 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Mini Mencore Bot Detector</title>
+<title>Mini Mencore AI Detector</title>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+
 <style>
-    body {
-        font-family: Arial;
-        background: #0f172a;
-        color: white;
-        text-align: center;
-        padding: 20px;
-    }
-    input, button {
-        padding: 10px;
-        margin: 5px;
-        border-radius: 8px;
-        border: none;
-    }
-    input {
-        width: 250px;
-    }
-    button {
-        background: orange;
-        cursor: pointer;
-        font-weight: bold;
-    }
-    .card {
-        background: #1e293b;
-        padding: 20px;
-        border-radius: 15px;
-        margin-top: 20px;
-    }
-    img {
-        max-width: 200px;
-        margin-top: 10px;
-        border-radius: 10px;
-    }
+body {
+    background: #0f172a;
+    color: white;
+    font-family: Arial;
+    text-align: center;
+}
+input, button {
+    padding: 10px;
+    margin: 5px;
+    border-radius: 8px;
+    border: none;
+}
+button {
+    background: orange;
+    font-weight: bold;
+}
+.card {
+    background: #1e293b;
+    padding: 20px;
+    margin-top: 20px;
+    border-radius: 12px;
+}
+img {
+    max-width: 250px;
+    margin-top: 10px;
+}
 </style>
 </head>
+
 <body>
 
-<h1>🔥 Mini Mencore Bot Detector</h1>
+<h1>🔥 Mini Mencore AI Bot Detector</h1>
 
-<!-- WhatsApp Link -->
 <input id="link" placeholder="Paste WhatsApp Channel Link"><br>
+<input id="total" placeholder="Total Reactions"><br>
 
-<!-- Image Upload -->
 <input type="file" id="imageInput" accept="image/*"><br>
-<img id="preview" style="display:none;"/>
+<img id="preview"/>
 
-<h3>Enter Reactions</h3>
-<input id="views" placeholder="Views"><br>
-
-<input id="love" placeholder="❤️"><br>
-<input id="laugh" placeholder="😂"><br>
-<input id="wow" placeholder="😮"><br>
-<input id="sad" placeholder="😢"><br>
-<input id="like" placeholder="👍"><br>
-
-<button onclick="analyze()">Analyze</button>
+<button onclick="processImage()">Analyze Image</button>
 
 <div class="card" id="resultBox" style="display:none;">
     <h2 id="result"></h2>
-    <p id="details"></p>
+    <pre id="details"></pre>
 </div>
 
 <script>
-// Image preview
+
+// Preview Image
 document.getElementById("imageInput").onchange = function(e) {
     const file = e.target.files[0];
-    const preview = document.getElementById("preview");
-
-    if (file) {
-        preview.src = URL.createObjectURL(file);
-        preview.style.display = "block";
-    }
+    document.getElementById("preview").src = URL.createObjectURL(file);
 };
+
+// OCR + Detection
+async function processImage() {
+    const file = document.getElementById("imageInput").files[0];
+    const totalInput = Number(document.getElementById("total").value);
+
+    if (!file) {
+        alert("Upload image first");
+        return;
+    }
+
+    document.getElementById("result").innerText = "⏳ Scanning image...";
+
+    const { data: { text } } = await Tesseract.recognize(file, 'eng');
+
+    console.log("OCR TEXT:", text);
+
+    // Extract numbers from image
+    const numbers = text.match(/\d+/g)?.map(Number) || [];
+
+    if (numbers.length < 2) {
+        document.getElementById("result").innerText = "❌ Couldn't detect reactions properly";
+        return;
+    }
+
+    // Assume first few numbers are reactions
+    const reactions = {
+        "❤️": numbers[0] || 0,
+        "😂": numbers[1] || 0,
+        "😮": numbers[2] || 0,
+        "😢": numbers[3] || 0,
+        "👍": numbers[4] || 0
+    };
+
+    const result = detectBotReaction({
+        reactions,
+        views: totalInput
+    });
+
+    document.getElementById("resultBox").style.display = "block";
+    document.getElementById("result").innerText = result.result;
+
+    document.getElementById("details").innerText =
+`Detected Reactions:
+❤️ ${reactions["❤️"]}
+😂 ${reactions["😂"]}
+😮 ${reactions["😮"]}
+😢 ${reactions["😢"]}
+👍 ${reactions["👍"]}
+
+Score: ${result.score}
+Dominant: ${result.dominantPercentage}
+Ratio: ${result.ratio}
+
+Rules:
+- ${result.rules.join("\n- ")}`;
+}
+
 
 // Detection Algorithm
 function detectBotReaction(data) {
     const { reactions, views } = data;
 
     const total = Object.values(reactions).reduce((a,b)=>a+b,0);
-    if (total === 0 || views === 0) return { result: "No data", score: 0 };
-
     const max = Math.max(...Object.values(reactions));
     const dominant = (max / total) * 100;
 
@@ -114,44 +154,14 @@ function detectBotReaction(data) {
     else result = "✅ Looks Natural";
 
     return {
-        total,
-        dominant: dominant.toFixed(2),
-        diversity: diversity.toFixed(2),
-        ratio: ratio.toFixed(2),
         score,
+        dominantPercentage: dominant.toFixed(2) + "%",
+        ratio: ratio.toFixed(2),
         rules,
         result
     };
 }
 
-// Analyze function
-function analyze() {
-    const data = {
-        reactions: {
-            "❤️": Number(document.getElementById("love").value),
-            "😂": Number(document.getElementById("laugh").value),
-            "😮": Number(document.getElementById("wow").value),
-            "😢": Number(document.getElementById("sad").value),
-            "👍": Number(document.getElementById("like").value)
-        },
-        views: Number(document.getElementById("views").value)
-    };
-
-    const res = detectBotReaction(data);
-
-    document.getElementById("resultBox").style.display = "block";
-    document.getElementById("result").innerText = res.result;
-
-    document.getElementById("details").innerText =
-        `Score: ${res.score}
-Total Reactions: ${res.total}
-Dominant %: ${res.dominant}%
-Diversity: ${res.diversity}
-Ratio: ${res.ratio}
-
-Triggered Rules:
-- ${res.rules.join("\n- ")}`;
-}
 </script>
 
 </body>
