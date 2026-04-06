@@ -1,29 +1,129 @@
-<script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mini Mencore</title>
 
-// Start analysis with spinner
-function startAnalysis() {
-
-    document.getElementById("output").innerHTML = `
-        <div class="spinner"></div>
-        <p>Analyzing reaction pattern...</p>
-    `;
-
-    setTimeout(() => {
-        analyze();
-    }, 6000);
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #0a1f44, #1e90ff);
+    color: white;
+    text-align: center;
 }
 
-// Main logic
+.container {
+    margin-top: 60px;
+}
+
+h1 {
+    font-size: 40px;
+    margin-bottom: 5px;
+}
+
+h2 {
+    font-size: 18px;
+    font-weight: normal;
+    margin-top: 0;
+}
+
+.powered {
+    font-size: 12px;
+    opacity: 0.6;
+    margin-bottom: 30px;
+}
+
+input {
+    width: 260px;
+    padding: 12px;
+    margin: 8px;
+    border-radius: 10px;
+    border: none;
+}
+
+button {
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 10px;
+}
+
+.initiate {
+    background: #00bfff;
+}
+
+.clear {
+    background: crimson;
+}
+
+.result {
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+}
+
+/* Spinner */
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 5px solid rgba(255,255,255,0.3);
+    border-top: 5px solid #00bfff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: auto;
+}
+
+@keyframes spin {
+    100% { transform: rotate(360deg); }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Mini Mencore</h1>
+<h2>Bot Reaction Detector</h2>
+<div class="powered">Powered by Menmex</div>
+
+<input id="link" placeholder="WhatsApp Link"><br>
+<input id="love" type="number" placeholder="Love"><br>
+<input id="like" type="number" placeholder="Like"><br>
+<input id="laugh" type="number" placeholder="Laugh"><br>
+<input id="total" type="number" placeholder="Total"><br>
+
+<button class="initiate" onclick="startAnalysis()">Initiate</button>
+<button class="clear" onclick="clearFields()">Clear</button>
+
+<div class="result" id="output"></div>
+
+</div>
+
+<script>
+
+function startAnalysis() {
+    document.getElementById("output").innerHTML = `
+        <div class="spinner"></div>
+        <p>Analyzing...</p>
+    `;
+
+    setTimeout(analyze, 6000);
+}
+
 function analyze() {
 
-    const link = document.getElementById("link").value;
     const love = Number(document.getElementById("love").value);
     const like = Number(document.getElementById("like").value);
     const laugh = Number(document.getElementById("laugh").value);
     const total = Number(document.getElementById("total").value);
 
     if (!total || love > total) {
-        document.getElementById("output").innerHTML = "❌ Invalid input";
+        document.getElementById("output").innerHTML = "Invalid input";
         return;
     }
 
@@ -33,40 +133,35 @@ function analyze() {
     let result = "";
     let confidence = "";
 
-    // ✅ UPDATED RULE (59%)
+    // ✅ 59% RULE
     if (lovePercent >= 59) {
 
-        result = "🚨 BOT REACTION DETECTED";
+        result = "BOT REACTION DETECTED";
 
-        // 🔥 NEW CONFIDENCE (2% - 5% boost)
-        let minConf = lovePercent + (lovePercent * 0.02);
-        let maxConf = lovePercent + (lovePercent * 0.05);
+        let min = lovePercent + (lovePercent * 0.02);
+        let max = lovePercent + (lovePercent * 0.05);
 
-        if (maxConf > 100) maxConf = 100;
+        if (max > 100) max = 100;
 
-        confidence = `${minConf.toFixed(2)}% - ${maxConf.toFixed(2)}%`;
+        confidence = min.toFixed(2) + "% - " + max.toFixed(2) + "%";
 
     } else {
 
-        result = "✅ ORGANIC REACTIONS";
+        result = "ORGANIC REACTIONS";
         confidence = "Natural";
     }
 
     document.getElementById("output").innerHTML = `
         <h3>${result}</h3>
-
-        <p><b>Link:</b> ${link || "N/A"}</p>
-
-        <p>
-        ❤️ ${love} | 👍 ${like} | 😂 ${laugh} | 📦 ${others}
-        </p>
-
+        <p>Love: ${love}</p>
+        <p>Like: ${like}</p>
+        <p>Laugh: ${laugh}</p>
+        <p>Others: ${others}</p>
         <p>Total: ${total}</p>
         <p>Confidence: ${confidence}</p>
     `;
 }
 
-// Clear function
 function clearFields() {
     document.getElementById("link").value = "";
     document.getElementById("love").value = "";
@@ -77,3 +172,6 @@ function clearFields() {
 }
 
 </script>
+
+</body>
+</html>
