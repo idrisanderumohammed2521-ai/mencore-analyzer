@@ -2,21 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Mini Mencore Bot Detector</title>
-
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-
+<title>🔥 Mini Mencore Bot Detector v2</title>
 <style>
 body {
-    background: #0f172a;
-    color: white;
     font-family: Arial;
+    background: #0b1a2f;
+    color: white;
     text-align: center;
     padding: 20px;
 }
 input, button {
     padding: 10px;
-    margin: 6px;
+    margin: 10px;
     border-radius: 8px;
     border: none;
 }
@@ -25,127 +22,116 @@ button {
     font-weight: bold;
     cursor: pointer;
 }
-.card {
-    background: #1e293b;
-    padding: 20px;
+.result {
     margin-top: 20px;
+    padding: 20px;
+    background: #162447;
     border-radius: 12px;
-}
-img {
-    max-width: 220px;
-    margin-top: 10px;
 }
 </style>
 </head>
 
 <body>
 
-<h1>🔥 Mini Mencore Bot Detector</h1>
+<h1>🔥 Mini Mencore Bot Detector v2</h1>
 
-<input id="link" placeholder="WhatsApp Channel Link"><br>
+<input type="text" id="link" placeholder="WhatsApp Channel Link"><br>
 
-<input type="file" id="imageInput" accept="image/*"><br>
-<img id="preview" style="display:none;"><br>
-
-<input id="total" placeholder="Total Reactions (optional)"><br>
+<input type="number" id="love" placeholder="❤️ Love"><br>
+<input type="number" id="like" placeholder="👍 Like"><br>
+<input type="number" id="laugh" placeholder="😂 Laugh"><br>
+<input type="number" id="total" placeholder="Total Reactions"><br>
 
 <button onclick="analyze()">Analyze</button>
 
-<div class="card" id="resultBox" style="display:none;">
-    <h2 id="result"></h2>
-    <pre id="details"></pre>
-</div>
+<div class="result" id="output"></div>
 
 <script>
-
-// Preview image
-document.getElementById("imageInput").onchange = function(e) {
-    const file = e.target.files[0];
-    const preview = document.getElementById("preview");
-
-    if (file) {
-        preview.src = URL.createObjectURL(file);
-        preview.style.display = "block";
-    }
-};
-
-// MAIN FUNCTION
-async function analyze() {
-
-    const file = document.getElementById("imageInput").files[0];
+function analyze() {
     const link = document.getElementById("link").value;
+    const love = Number(document.getElementById("love").value);
+    const like = Number(document.getElementById("like").value);
+    const laugh = Number(document.getElementById("laugh").value);
+    const total = Number(document.getElementById("total").value);
 
-    if (!file) {
-        alert("Upload image first");
+    if (!total || (love + like + laugh) > total) {
+        alert("Invalid input: reactions exceed total");
         return;
     }
 
-    document.getElementById("resultBox").style.display = "block";
-    document.getElementById("result").innerText = "⏳ Scanning image...";
+    const others = total - (love + like + laugh);
 
-    const { data: { text } } = await Tesseract.recognize(file, 'eng');
+    const lovePercent = (love / total) * 100;
+    const likeRatio = love > 0 ? (like / love) : 0;
+    const laughPercent = (laugh / total) * 100;
 
-    console.log("OCR TEXT:", text);
+    // diversity (used reactions)
+    let used = 0;
+    if (love > 0) used++;
+    if (like > 0) used++;
+    if (laugh > 0) used++;
+    if (others > 0) used++;
 
-    let numbers = text.match(/\d+/g)?.map(Number) || [];
+    const diversity = used / 4;
 
-    if (numbers.length === 0) {
-        document.getElementById("result").innerText = "❌ No numbers detected";
-        return;
-    }
+    const dominanceGap = love - (like + laugh);
 
-    // 🔥 Sort numbers descending
-    numbers.sort((a, b) => b - a);
+    let score = 0;
 
-    // 🔥 First = total reactions
-    let detectedTotal = numbers[0];
+    // 🔥 RULES
 
-    // 🔥 Use input total if provided
-    let inputTotal = Number(document.getElementById("total").value);
-    let total = inputTotal > 0 ? inputTotal : detectedTotal;
+    // Love %
+    if (lovePercent >= 85) score += 40;
+    else if (lovePercent >= 80) score += 30;
+    else if (lovePercent >= 75) score += 20;
 
-    // 🔥 Exact reactions
-    let love = numbers[1] || 0;
-    let like = numbers[2] || 0;
-    let laugh = numbers[3] || 0;
+    // Like ratio
+    if (likeRatio < 0.05) score += 20;
+    else if (likeRatio < 0.1) score += 10;
 
-    // 🔥 Others (remaining numbers)
-    let othersArray = numbers.slice(4);
-    let others = othersArray.reduce((a, b) => a + b, 0);
+    // Laugh %
+    if (laughPercent < 1) score += 20;
+    else if (laughPercent < 3) score += 15;
 
-    // 🔥 Calculate love %
-    let lovePercentage = (love / total) * 100;
+    // Diversity
+    if (diversity < 0.2) score += 20;
+    else if (diversity < 0.4) score += 10;
 
-    // 🔥 Detection rule
+    // Dominance gap
+    if (dominanceGap > (0.6 * total)) score += 20;
+
+    // 🎯 FINAL RESULT
     let result = "";
-    if (lovePercentage >= 80) {
-        result = "🚨 Bot Reaction Detected (Mixed Reactions)";
-    } else if (lovePercentage >= 60) {
-        result = "⚠️ Suspicious Activity";
-    } else {
-        result = "✅ Natural Reactions";
-    }
+    if (score >= 70) result = "🚨 Strong Bot";
+    else if (score >= 50) result = "🚨 Bot";
+    else if (score >= 30) result = "⚠️ Suspicious";
+    else result = "✅ Natural";
 
-    // 🔥 Display result
-    document.getElementById("result").innerText = result;
+    // 🎯 CONFIDENCE RATE
+    let confidence = Math.min(100, Math.round((score / 100) * 100));
 
-    document.getElementById("details").innerText =
-`WhatsApp Link:
-${link}
+    document.getElementById("output").innerHTML = `
+        <h2>${result}</h2>
+        <p><b>WhatsApp Link:</b> ${link}</p>
 
-Detected Numbers:
-${numbers.join(", ")}
+        <p>❤️ Love: ${love}</p>
+        <p>👍 Like: ${like}</p>
+        <p>😂 Laugh: ${laugh}</p>
+        <p>➕ Others: ${others}</p>
 
-❤️ Love: ${love}
-👍 Like: ${like}
-😂 Laugh: ${laugh}
-✨ Other Reactions: ${others}
+        <hr>
 
-Total: ${total}
+        <p>📊 Love %: ${lovePercent.toFixed(2)}%</p>
+        <p>📊 Like/Love Ratio: ${likeRatio.toFixed(2)}</p>
+        <p>📊 Laugh %: ${laughPercent.toFixed(2)}%</p>
+        <p>📊 Diversity: ${diversity.toFixed(2)}</p>
 
-Love Percentage: ${lovePercentage.toFixed(2)}%`;
+        <hr>
+
+        <h3>🔥 Score: ${score}</h3>
+        <h2>🎯 Confidence: ${confidence}%</h2>
+    `;
 }
-
 </script>
 
 </body>
